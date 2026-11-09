@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>屏 · 亮度</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    font: 13px -apple-system, sans-serif;
+    --panel: #f4f7fb;
+    --surface: #ffffff;
+    --text: #162439;
+    --muted: #526279;
+    --border: #dce4ef;
+    --accent: #215dc8;
+    --tint: #e6efff;
+    --hover: #d6e5ff;
+    --track: #d8e0eb;
+    --thumb: #ffffff;
+    --thumb-border: #5e7faa;
+    --online: #14734d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --panel: #151b26;
+      --surface: #202938;
+      --text: #edf3fc;
+      --muted: #b0bfd3;
+      --border: #364357;
+      --accent: #a5c6ff;
+      --tint: #283c60;
+      --hover: #354e77;
+      --track: #43536b;
+      --thumb: #edf3fc;
+      --thumb-border: #8099bf;
+      --online: #82d8ad;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; color: var(--text); user-select: none; }
+  main { height: 100vh; overflow: auto; padding: 12px; border-radius: 16px;
+    background: var(--panel); border: 1px solid var(--border); }
+  header { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+  h1 { flex: 1; margin: 0; font-size: 15px; font-weight: 700; }
+  .icon { display: block; width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor;
+    stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-tile { display: grid; place-items: center; flex: none; width: 30px; height: 30px;
+    border-radius: 9px; color: var(--accent); background: var(--tint); }
+  #displays { display: grid; gap: 8px; }
+  section, footer { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  section { min-width: 0; min-height: 78px; padding: 9px 10px 8px; }
+  label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  label span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 650; }
+  output { padding: 2px 7px; border-radius: 6px; background: var(--tint); color: var(--accent);
+    font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  input { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 23px;
+    margin: 2px 0 0; border-radius: 7px; background: transparent; cursor: pointer; }
+  input::-webkit-slider-runnable-track { height: 6px; border-radius: 99px;
+    background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--track) var(--fill, 0%)); }
+  input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px;
+    margin-top: -4.5px; border: 1px solid var(--thumb-border); border-radius: 50%; background: var(--thumb);
+    box-shadow: 0 1px 3px #0003; }
+  input:disabled { cursor: default; opacity: .6; }
+  small { position: relative; display: block; padding-top: 2px; text-align: center; font-size: 10px; color: var(--muted); }
+  small::before { content: ''; position: absolute; left: 50%; top: -3px; transform: translateX(-50%);
+    width: 1px; height: 4px; background: currentColor; pointer-events: none; }
+  footer { display: flex; align-items: center; gap: 8px; margin-top: 9px; padding: 7px 9px; }
+  footer > .icon { margin: 0 2px; color: var(--muted); }
+  .screen-info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .screen-name { font-size: 12px; font-weight: 650; }
+  #builtin-status { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; }
+  #builtin-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; border: 1px solid currentColor; }
+  #builtin-status[data-active="true"] { color: var(--online); }
+  #builtin-status[data-active="true"]::before { background: currentColor; }
+  button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 30px;
+    padding: 0 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+  button .icon { width: 13px; height: 13px; }
+  #builtin[data-action="open"] { background: var(--tint); color: var(--accent); border-color: transparent; }
+  button:hover:not(:disabled), #builtin[data-action="open"]:hover:not(:disabled) { background: var(--hover); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { cursor: default; opacity: .6; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  p { margin: 0; padding: 10px; color: var(--muted); }
+  @media (prefers-contrast: more) {
+    main, section, footer, button { border-color: var(--muted); }
+    input::-webkit-slider-runnable-track { outline: 1px solid var(--muted); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="icon-tile">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+    </span>
+    <h1>屏幕亮度</h1>
+    <button id="settings" type="button" title="更多设置" aria-label="更多设置" aria-haspopup="menu">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4l.5 2.4 1.5.9 2.4-.8 2 3.5-1.9 1.6v1.8l1.9 1.6-2 3.5-2.4-.8-1.5.9-.5 2.4h-4l-.5-2.4-1.5-.9-2.4.8-2-3.5 1.9-1.6v-1.8L3.6 9l2-3.5 2.4.8 1.5-.9z"/><circle cx="12" cy="11.5" r="2.7"/></svg>
+      <span>设置</span>
+    </button>
+  </header>
+  <div id="displays"><p>正在读取显示器…</p></div>
+  <footer id="builtin-controls" hidden>
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20m-13-3-1 3m7-3 1 3"/></svg>
+    <div class="screen-info">
+      <span class="screen-name">内建显示屏</span>
+      <span id="builtin-status" role="status"></span>
+    </div>
+    <button id="builtin" type="button" aria-describedby="builtin-status">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8m-5.7-5.1a8.5 8.5 0 1 0 11.4 0"/></svg>
+      <span id="builtin-action"></span>
+    </button>
+  </footer>
+</main>
+<script>
+  const send = (action, fields = {}) => webkit.messageHandlers.brightnessPanel.postMessage({ action, ...fields });
+  const list = document.getElementById('displays');
+  const builtin = document.getElementById('builtin');
+  const builtinControls = document.getElementById('builtin-controls');
+  const builtinStatus = document.getElementById('builtin-status');
+  const builtinAction = document.getElementById('builtin-action');
+  const settings = document.getElementById('settings');
+  const rows = new Map();
+  let layout;
+
+  function makeRow(uuid, index) {
+    const section = document.createElement('section');
+    const label = document.createElement('label');
+    const name = document.createElement('span');
+    const percent = document.createElement('output');
+    percent.setAttribute('aria-hidden', 'true');
+    const slider = document.createElement('input');
+    const marker = document.createElement('small');
+    slider.type = 'range';
+    slider.min = 1;
+    slider.max = 100;
+    slider.step = 1;
+    slider.id = `brightness-${index}`;
+    label.htmlFor = slider.id;
+    marker.textContent = '50% 最小硬件值';
+    label.append(name, percent);
+    section.append(label, slider, marker);
+    list.append(section);
+
+    let lastSent, pending, sentDuringDrag = false;
+    const flush = (commit = false) => {
+      if (pending !== undefined) cancelAnimationFrame(pending);
+      pending = undefined;
+      if (!slider.isConnected || slider.disabled || (!commit && slider.value === lastSent)) return;
+      lastSent = slider.value;
+      sentDuringDrag ||= row.dragging;
+      send('brightness', { uuid, value: slider.valueAsNumber, dragging: row.dragging });
+    };
+    function showValue() {
+      const value = slider.valueAsNumber;
+      percent.value = `${value}%`;
+      slider.style.setProperty('--fill', `${100 * (value - slider.min) / (slider.max - slider.min)}%`);
+      slider.setAttribute('aria-valuetext', `${value}%`);
+    }
+    const row = { section, name, percent, slider, marker, endDrag, dragging: false, waiting: () => pending !== undefined,
+      sync(value) { slider.value = value; lastSent = slider.value; showValue(); } };
+    slider.addEventListener('pointerdown', () => { row.dragging = true; });
+    function endDrag() {
+      if (!row.dragging) return;
+      row.dragging = false;
+      flush(sentDuringDrag);
+      sentDuringDrag = false;
+    }
+    slider.addEventListener('pointercancel', endDrag);
+    slider.addEventListener('lostpointercapture', endDrag);
+    slider.addEventListener('input', () => {
+      showValue();
+      if (pending === undefined) pending = requestAnimationFrame(() => flush());
+    });
+    slider.addEventListener('change', () => flush());
+    rows.set(uuid, row);
+  }
+
+  function updateDisplays(displays, builtinPending = null) {
+    const keys = JSON.stringify(displays.map(d => d.uuid));
+    if (keys !== layout) {
+      layout = keys;
+      rows.clear();
+      list.replaceChildren();
+      if (!displays.length) list.textContent = '暂无显示器';
+      displays.forEach((d, index) => makeRow(d.uuid, index));
+    }
+    let internal;
+    for (const d of displays) {
+      if (d.builtin) internal = d;
+      const row = rows.get(d.uuid);
+      row.section.hidden = d.builtin && !d.active;
+      row.name.textContent = d.builtin ? '内建显示屏' : d.name;
+      const available = d.active && typeof d.brightness === 'number';
+      row.slider.disabled = !available;
+      row.slider.hidden = !d.active;
+      row.marker.hidden = !d.active || d.builtin;
+      if (!row.dragging && !row.waiting()) {
+        if (available) row.sync(Math.round(d.brightness * 100));
+        else row.percent.value = d.active ? '读取中…' : '已关闭';
+      }
+    }
+    builtinControls.hidden = !internal;
+    if (internal) {
+      const pending = builtinPending !== null;
+      const action = internal.active ? '关闭' : '打开';
+      const status = pending ? (builtinPending ? '正在打开…' : '正在关闭…') : (internal.active ? '已开启' : '已关闭');
+      builtinStatus.dataset.active = String(!pending && internal.active);
+      if (builtinStatus.textContent !== status) builtinStatus.textContent = status;
+      builtinAction.textContent = action;
+      builtin.dataset.action = internal.active ? 'close' : 'open';
+      builtin.disabled = pending;
+      builtin.title = `${action}内建显示屏`;
+      builtin.setAttribute('aria-label', builtin.title);
+    }
+  }
+
+  function endBrightnessDrags() {
+    for (const row of rows.values()) row.endDrag();
+  }
+  window.addEventListener('pointerup', endBrightnessDrags);
+  window.addEventListener('blur', endBrightnessDrags);
+
+  builtin.addEventListener('click', () => send('toggleBuiltin'));
+  settings.addEventListener('click', () => {
+    const { left, bottom } = settings.getBoundingClientRect();
+    send('settings', { x: left, y: bottom });
+  });
+  send('ready');
+</script>
+</body>
+</html>
